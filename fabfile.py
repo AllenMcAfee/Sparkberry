@@ -36,9 +36,10 @@ def hadoop():
 @parallel
 def add_path():
     with settings(sudo_user="hduser",user="hduser",prompt={"Enter  ?" :"\r\n"}):   
-        sudo ("echo 'export JAVA_HOME=/usr/lib/jvm/java-6-openjdk-armhf' > ~/.bashrc")
+        sudo ("echo 'export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-armhf' > ~/.bashrc")
         sudo("echo 'export HADOOP_INSTALL=/usr/local/hadoop' >> ~/.bashrc")
         sudo("echo 'export PATH=$PATH:$HADOOP_INSTALL/bin'  >> ~/.bashrc")
+        sudo("echo 'export HADOOP_COMMON_LIB_NATIVE_DIR=/usr/local/hadoop/lib/native'  >> ~/.bashrc")
     reboot()        
 #setup_ssh_access
 #this allows the master, here the first node in hosts to access to the other worker nodes, without requiring passwords every time
@@ -74,11 +75,18 @@ def configure_single_hadoop():
     puts('./yarn-site.xml' , '/usr/local/hadoop/etc/hadoop/')
     puts('./hdfs-site.xml' , '/usr/local/hadoop/etc/hadoop/')
     with settings(sudo_user="hduser",user="hduser",prompt={"Enter  ?" :"\r\n"}):
-        run('mkdir -p /home/hduser/hadoop/namenode/')
-        run('mkdir -p /home/hduser/hadoop/datanode/')
+        run('mkdir -p /home/hduser/storage/hadoop/namenode/')
+        run('mkdir -p /home/hduser/storage/hadoop/datanode/')
 #check hadoop single node
 @parallel
 def check_single_hadoop():
     with settings(sudo_user="hduser",user="hduser",prompt={"Enter  ?" :"\r\n"}):
         run("/usr/local/hadoop/bin/hadoop namenode -format")
         run("/usr/local/hadoop/bin/start-all.sh")
+@hosts(env.hosts[0])
+def init_hdfs()
+    for host in env.hosts[1:]:
+        with open('slaves', 'a') as f:
+            f.write(str(host))
+    puts("./slaves", "/usr/local/hadoop/etc/hadoop")
+    run("hdfs namenode -format ")
