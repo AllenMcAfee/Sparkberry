@@ -33,11 +33,13 @@ def hadoop():
         sudo("tar vxzf hadoop-2.6.0.tar.gz -C /usr/local")
         sudo("mv /usr/local/hadoop-2.6.0 /usr/local/hadoop")
         sudo("chown -R hduser:hadoop /usr/local/hadoop")
-        run("echo 'export JAVA_HOME=/usr/lib/jvm/java-6-openjdk-armhf' > ~/.bashrc")
-        run("echo 'export HADOOP_INSTALL=/usr/local/hadoop' >> ~/.bashrc")
-        run("echo 'export PATH=$PATH:$HADOOP_INSTALL/bin'  >> ~/.bashrc")
-        reboot()
-        
+@parallel
+def add_path():
+    with settings(sudo_user="hduser",user="hduser",prompt={"Enter  ?" :"\r\n"}):   
+        sudo ("echo 'export JAVA_HOME=/usr/lib/jvm/java-6-openjdk-armhf' > ~/.bashrc")
+        sudo("echo 'export HADOOP_INSTALL=/usr/local/hadoop' >> ~/.bashrc")
+        sudo("echo 'export PATH=$PATH:$HADOOP_INSTALL/bin'  >> ~/.bashrc")
+    reboot()        
 #setup_ssh_access
 #this allows the master, here the first node in hosts to access to the other worker nodes, without requiring passwords every time
 #requires user intervention, entering in passwords for slaves
@@ -64,3 +66,19 @@ def install_spark():
     run("wget http://d3kbcqa49mib13.cloudfront.net/spark-1.3.1-bin-hadoop2.6.tgz")
     run("tar -xf spark-1.3.1-bin-hadoop2.6.tgz")
     run("mv ./spark-1.3.1-bin-hadoop2.6 ./spark")
+#copy over conf files
+@parallel
+def configure_single_hadoop():
+    puts('./core-site.xml' , '/usr/local/hadoop/etc/hadoop/')
+    puts('./mapred-site.xml' , '/usr/local/hadoop/etc/hadoop/')
+    puts('./yarn-site.xml' , '/usr/local/hadoop/etc/hadoop/')
+    puts('./hdfs-site.xml' , '/usr/local/hadoop/etc/hadoop/')
+    with settings(sudo_user="hduser",user="hduser",prompt={"Enter  ?" :"\r\n"}):
+        run('mkdir -p /home/hduser/hadoop/namenode/')
+        run('mkdir -p /home/hduser/hadoop/datanode/')
+#check hadoop single node
+@parallel
+def check_single_hadoop():
+    with settings(sudo_user="hduser",user="hduser",prompt={"Enter  ?" :"\r\n"}):
+        run("/usr/local/hadoop/bin/hadoop namenode -format")
+        run("/usr/local/hadoop/bin/start-all.sh")
